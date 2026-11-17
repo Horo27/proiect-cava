@@ -1,0 +1,7 @@
+CAVA-2026-TEMA1
+laboratoare-facultate
+.DS_Store
+.ipynb_checkpoints/
+__pycache__/
+.venv
+documentatie.md
