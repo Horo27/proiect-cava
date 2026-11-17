@@ -3,6 +3,7 @@ import numpy as np
 
 from utils import show_image
 
+
 def extrage_careu(image, debug=False):
     image_blur = cv.medianBlur(image, 5)
     image_hsv = cv.cvtColor(image_blur, cv.COLOR_BGR2HSV)
@@ -54,3 +55,61 @@ def extrage_careu(image, debug=False):
     result = cv.warpPerspective(image, M, (width, height))
 
     return result
+
+
+def detecteaza_template(gray, centru_template, prag=0.4, debug=False):
+    cx, cy = centru_template
+    h = 26
+    template = gray[cy - h:cy + h, cx - h:cx + h]
+    if debug:
+        show_image(template, 'template', size=(3, 3))
+
+    corr = cv.matchTemplate(gray, template, cv.TM_CCOEFF_NORMED)
+    if debug:
+        show_image(corr, 'harta de corelatie')
+
+    maxim_local = corr == cv.dilate(corr, np.ones((25, 25), np.uint8))
+    ys, xs = np.where(maxim_local & (corr > prag))
+    return np.stack([xs + h, ys + h], axis=1).astype(float)
+
+
+def potriveste_grila(puncte, cx=405, cy=403, dx=42.3, prag_eroare=8):
+    for _ in range(5):
+        dy = dx * np.sqrt(3) / 2
+        r = np.round((puncte[:, 1] - cy) / dy)
+        q = np.round((puncte[:, 0] - cx) / dx - r / 2)
+        eroare = np.hypot(puncte[:, 0] - (cx + dx * (q + r / 2)), puncte[:, 1] - (cy + dy * r))
+        bune = eroare < prag_eroare
+
+        n = bune.sum()
+        A = np.zeros((2 * n, 3))
+        b = np.zeros(2 * n)
+        A[0::2, 0] = 1
+        A[0::2, 2] = (q + r / 2)[bune]
+        b[0::2] = puncte[bune, 0]
+        A[1::2, 1] = 1
+        A[1::2, 2] = (np.sqrt(3) / 2 * r)[bune]
+        b[1::2] = puncte[bune, 1]
+        cx, cy, dx = np.linalg.lstsq(A, b, rcond=None)[0]
+    return (cx, cy, dx), bune, eroare
+
+
+def genereaza_celule(cx, cy, dx):
+    dy = dx * np.sqrt(3) / 2
+    celule = []
+    for r in range(-5, 6):
+        for q in range(-5, 6):
+            s = -q - r
+            if max(abs(q), abs(r), abs(s)) > 5:
+                continue
+            if sorted([abs(q), abs(r), abs(s)]) == [0, 5, 5]:
+                continue
+            celule.append((cx + dx * (q + r / 2), cy + dy * r))
+    return np.array(celule)
+
+
+def calculeaza_celule(tabla_goala, centru_template=(341, 291), debug=False):
+    gray = cv.cvtColor(tabla_goala, cv.COLOR_BGR2GRAY)
+    puncte = detecteaza_template(gray, centru_template, debug=debug)
+    parametri, _, _ = potriveste_grila(puncte)
+    return genereaza_celule(*parametri)
