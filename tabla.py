@@ -94,9 +94,8 @@ def potriveste_grila(puncte, cx=405, cy=403, dx=42.3, prag_eroare=8):
     return (cx, cy, dx), bune, eroare
 
 
-def genereaza_celule(cx, cy, dx):
-    dy = dx * np.sqrt(3) / 2
-    celule = []
+def coordonate_celule():
+    coordonate = []
     for r in range(-5, 6):
         for q in range(-5, 6):
             s = -q - r
@@ -104,8 +103,22 @@ def genereaza_celule(cx, cy, dx):
                 continue
             if sorted([abs(q), abs(r), abs(s)]) == [0, 5, 5]:
                 continue
-            celule.append((cx + dx * (q + r / 2), cy + dy * r))
-    return np.array(celule)
+            coordonate.append((q, r))
+    return np.array(coordonate)
+
+
+def perechi_vecine():
+    q, r = coordonate_celule().T
+    dq = q[:, None] - q[None, :]
+    dr = r[:, None] - r[None, :]
+    distanta = (np.abs(dq) + np.abs(dr) + np.abs(dq + dr)) // 2
+    return np.argwhere(np.triu(distanta == 1))
+
+
+def genereaza_celule(cx, cy, dx):
+    dy = dx * np.sqrt(3) / 2
+    q, r = coordonate_celule().T
+    return np.stack([cx + dx * (q + r / 2), cy + dy * r], axis=1)
 
 
 def calculeaza_celule(tabla_goala, centru_template=(341, 291), debug=False):
