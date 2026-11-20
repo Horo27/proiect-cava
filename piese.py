@@ -23,3 +23,15 @@ def piese_noi_absolut(tabla, ocupate_anterior, celule):
     scor = v[i] + v[j]
     scor[ocupate_anterior[i] | ocupate_anterior[j]] = np.inf
     return PERECHI[np.argmin(scor)], scor
+
+
+def schimbare_celule(tabla, anterioara, celule):
+    dif = cv.absdiff(tabla, anterioara).max(axis=2)
+    return np.array([decupeaza_piesa(dif, c)[DISC].mean() for c in celule])
+
+
+def piese_noi_diferenta(tabla, anterioara, celule):
+    d = schimbare_celule(tabla, anterioara, celule)
+    i, j = PERECHI.T
+    scor = d[i] + d[j]
+    return PERECHI[np.argmax(scor)], scor
